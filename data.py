@@ -1,5 +1,6 @@
 import json
 import psycopg2
+import re
 from psycopg2.extras import RealDictCursor
 
 
@@ -13,16 +14,11 @@ class Data:
 
         self.cur = self.db_connection.cursor()
 
-        self.VALID_VALUES = {
-            'attribute': ['name', 'color', 'tail_length', 'whiskers_length'],
-            'order': ['asc', 'desc'],
-        }
-
-        self.PARAMS_TYPE = {
-            'attribute': 'name',
-            'order': 'asc',
-            'offset': 1,
-            'limit': 1,
+        self.VALIDITY_CHECKER = {
+            'attribute': self.__check_attribute,
+            'order': self.__check_order,
+            'offset': self.__check_number,
+            'limit': self.__check_number,
         }
 
     def __del__(self):
@@ -31,35 +27,37 @@ class Data:
         self.cur.close()
         self.db_connection.close()
 
-    def param_exist(self, parameter):
-        return parameter in self.PARAMS_TYPE
+    def __check_attribute(self, value):
+        return value in ['name', 'color', 'tail_length', 'whiskers_length']
 
-    def param_valid(self, parameter, value):
-        value_lowered = value
+    def __check_order(self, value):
+        return value in ['asc', 'desc']
 
-        if isinstance(value, str):
-            value_lowered = value.lower()
-
-        if not isinstance(value_lowered, type(self.PARAMS_TYPE[parameter])):
-            return False
-
-        if parameter not in self.VALID_VALUES:
-            return True
-
-        if value_lowered in self.VALID_VALUES[parameter]:
+    def __check_number(self, value):
+        if re.match(r"^[0-9]*$", value):
             return True
         else:
             return False
 
-    def select_parameters(self, gross_params):
+    def __param_exist(self, parameter):
+        return parameter in self.VALIDITY_CHECKER
+
+    def __param_valid(self, parameter, value):
+        value_lowered = value.lower()
+        return self.VALIDITY_CHECKER[parameter](value_lowered)
+
+    def __select_parameters(self, gross_params):
         parameters = {}
         errors = []
+
+        if not gross_params:
+            return parameters, errors
 
         for parameter in gross_params:
             param_lower = parameter.lower()
 
-            if self.param_exist(param_lower):
-                if self.param_valid(param_lower, gross_params[parameter]):
+            if self.__param_exist(param_lower):
+                if self.__param_valid(param_lower, gross_params[parameter]):
                     parameters[param_lower] = gross_params[parameter]
                 else:
                     errors.append(f'Parameter \'{parameter}\' has invalid ' +
@@ -69,7 +67,7 @@ class Data:
 
         return parameters, errors
 
-    def get_sql_request(self, parameters):
+    def __get_sql_request(self, parameters):
         sql = 'SELECT * ' +\
             'FROM cats '
 
@@ -87,13 +85,20 @@ class Data:
         return sql + ';'
 
     def get_cats(self, gross_params=None):
-        parameters, errors = self.select_parameters(gross_params)
+        parameters = {}
+        errors = []
+        parameters, errors = self.__select_parameters(gross_params)
 
         if errors:
             return json.dumps(errors, ensure_ascii=False, indent=2)
 
-        print(json.dumps(parameters, ensure_ascii=False, indent=2))
+        sql_request = self.__get_sql_request(parameters)
+        self.cur.execute(sql_request)
 
-        sql_request = self.get_sql_request(parameters)
+        columns = ('name', 'color', 'tail_length', 'whiskers_length')
+        results = []
 
-        return sql_request
+        for row in self.cur.fetchall():
+            results.append(dict(zip(columns, row)))
+
+        return json.dumps(results, indent=2)

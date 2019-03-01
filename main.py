@@ -19,7 +19,6 @@ def ping():
 
 @app.route('/cats')
 def cats():
-    print(request.args)
     return cats_data.get_cats(gross_params=request.args)
 
 
