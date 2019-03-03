@@ -70,7 +70,7 @@ class Data:
                 if self.__param_valid(param_lower,
                                       gross_params[parameter],
                                       validator):
-                    parameters[param_lower] = gross_params[parameter]
+                    parameters[param_lower] = str(gross_params[parameter])
                 else:
                     errors.append(f'Parameter \'{parameter}\' has invalid ' +
                                   f'value: \'{gross_params[parameter]}\'')
