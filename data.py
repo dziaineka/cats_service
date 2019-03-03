@@ -14,11 +14,18 @@ class Data:
 
         self.cur = self.db_connection.cursor()
 
-        self.VALIDITY_CHECKER = {
+        self.SELECT_PARAMS = {
             'attribute': self.__check_attribute,
             'order': self.__check_order,
             'offset': self.__check_number,
             'limit': self.__check_number,
+        }
+
+        self.INSERT_PARAMS = {
+            'name': self.__check_dummy,
+            'color': self.__check_dummy,
+            'tail_length': self.__check_number,
+            'whiskers_length': self.__check_number,
         }
 
     def __del__(self):
@@ -26,6 +33,9 @@ class Data:
 
         self.cur.close()
         self.db_connection.close()
+
+    def __check_dummy(self, value):
+        return True
 
     def __check_attribute(self, value):
         return value in ['name', 'color', 'tail_length', 'whiskers_length']
@@ -39,14 +49,14 @@ class Data:
         else:
             return False
 
-    def __param_exist(self, parameter):
-        return parameter in self.VALIDITY_CHECKER
+    def __param_exist(self, parameter, validator):
+        return parameter in validator
 
-    def __param_valid(self, parameter, value):
+    def __param_valid(self, parameter, value, validator):
         value_lowered = value.lower()
-        return self.VALIDITY_CHECKER[parameter](value_lowered)
+        return validator[parameter](value_lowered)
 
-    def __select_parameters(self, gross_params):
+    def __get_parameters(self, gross_params, validator):
         parameters = {}
         errors = []
 
@@ -56,8 +66,10 @@ class Data:
         for parameter in gross_params:
             param_lower = parameter.lower()
 
-            if self.__param_exist(param_lower):
-                if self.__param_valid(param_lower, gross_params[parameter]):
+            if self.__param_exist(param_lower, validator):
+                if self.__param_valid(param_lower,
+                                      gross_params[parameter],
+                                      validator):
                     parameters[param_lower] = gross_params[parameter]
                 else:
                     errors.append(f'Parameter \'{parameter}\' has invalid ' +
@@ -67,7 +79,7 @@ class Data:
 
         return parameters, errors
 
-    def __get_sql_request(self, parameters):
+    def __get_select_sql_request(self, parameters):
         sql = 'SELECT * ' +\
             'FROM cats '
 
@@ -84,16 +96,51 @@ class Data:
 
         return sql + ';'
 
+    def __get_insert_sql_request(self, parameters):
+        sql = 'INSERT INTO cats ('
+
+        fields = ''
+
+        for field in parameters.keys():
+            fields += field + ', '
+
+        sql += fields[:-2] + ') '
+
+        values = ''
+
+        for value in parameters.values():
+            values += '\'' + value + '\', '
+
+        sql += 'VALUES (' + values[:-2] + ')'
+
+        return sql + ';'
+
+    def __get_insert_parameters(self, gross_params):
+        parameters = {}
+        errors = []
+
+        if not gross_params:
+            errors.append('Please, provide cat to save in DB.')
+
+        return parameters, errors
+
     def get_cats(self, gross_params=None):
         parameters = {}
         errors = []
-        parameters, errors = self.__select_parameters(gross_params)
+        parameters, errors = self.__get_parameters(gross_params,
+                                                   self.SELECT_PARAMS)
 
         if errors:
             return json.dumps(errors, ensure_ascii=False, indent=2)
 
-        sql_request = self.__get_sql_request(parameters)
-        self.cur.execute(sql_request)
+        sql_request = self.__get_select_sql_request(parameters)
+
+        try:
+            self.cur.execute(sql_request)
+        except psycopg2.InternalError as exc:
+            self.cur.execute("ROLLBACK")
+            errors.append(str(exc))
+            return json.dumps(errors, ensure_ascii=False,  indent=2)
 
         columns = ('name', 'color', 'tail_length', 'whiskers_length')
         results = []
@@ -102,3 +149,28 @@ class Data:
             results.append(dict(zip(columns, row)))
 
         return json.dumps(results, indent=2)
+
+    def add_cat(self, gross_params):
+        parameters = {}
+        errors = []
+        parameters, errors = self.__get_parameters(gross_params,
+                                                   self.INSERT_PARAMS)
+
+        if not parameters:
+            errors.append('Provide cat parameters, please.')
+
+        if errors:
+            return json.dumps(errors, ensure_ascii=False, indent=2)
+
+        sql_request = self.__get_insert_sql_request(parameters)
+
+        try:
+            self.cur.execute(sql_request)
+        except psycopg2.IntegrityError as exc:
+            self.cur.execute("ROLLBACK")
+            errors.append(str(exc))
+            return json.dumps(errors, ensure_ascii=False,  indent=2)
+
+        self.db_connection.commit()
+
+        return json.dumps(['Inserted successfully'], indent=2)
