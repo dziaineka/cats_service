@@ -20,14 +20,7 @@ def ping():
 
 @app.route('/cat', methods=['POST'])
 def cat():
-    params_str = request.get_data().decode('utf-8').replace('"', '')[1:-1]
-
-    if not params_str:
-        return str(['Provide cat parameters, please.']) + '\n'
-
-    params = dict(x.split(': ') for x in params_str.split(', '))
-
-    return cats_data.add_cat(gross_params=params) + '\n'
+    return cats_data.add_cat(gross_params=request.get_data()) + '\n'
 
 
 @app.route('/cats')

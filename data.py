@@ -53,7 +53,7 @@ class Data:
         return parameter in validator
 
     def __param_valid(self, parameter, value, validator):
-        value_lowered = value.lower()
+        value_lowered = str(value).lower()
         return validator[parameter](value_lowered)
 
     def __get_parameters(self, gross_params, validator):
@@ -153,7 +153,14 @@ class Data:
     def add_cat(self, gross_params):
         parameters = {}
         errors = []
-        parameters, errors = self.__get_parameters(gross_params,
+
+        try:
+            params_json = json.loads(gross_params)
+        except (json.decoder.JSONDecodeError, TypeError) as exc:
+            errors.append(str(exc))
+            return json.dumps(errors, ensure_ascii=False, indent=2)
+
+        parameters, errors = self.__get_parameters(params_json,
                                                    self.INSERT_PARAMS)
 
         if not parameters:
