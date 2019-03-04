@@ -1,13 +1,11 @@
 import json
 import psycopg2
 import re
-from psycopg2.extras import RealDictCursor
 
 
 class Data:
     def __init__(self):
-        # self.db_connection = psycopg2.connect(host="postgreDB",
-        self.db_connection = psycopg2.connect(host="localhost",
+        self.db_connection = psycopg2.connect(host="postgreDB",
                                               database="wg_forge_db",
                                               user="wg_forge",
                                               password="42a")
@@ -34,25 +32,31 @@ class Data:
         self.cur.close()
         self.db_connection.close()
 
-    def __check_dummy(self, value):
+    @staticmethod
+    def __check_dummy(value):
         return True
 
-    def __check_attribute(self, value):
+    @staticmethod
+    def __check_attribute(value):
         return value in ['name', 'color', 'tail_length', 'whiskers_length']
 
-    def __check_order(self, value):
+    @staticmethod
+    def __check_order(value):
         return value in ['asc', 'desc']
 
-    def __check_number(self, value):
+    @staticmethod
+    def __check_number(value):
         if re.match(r"^[0-9]*$", value):
             return True
         else:
             return False
 
-    def __param_exist(self, parameter, validator):
+    @staticmethod
+    def __param_exist(parameter, validator):
         return parameter in validator
 
-    def __param_valid(self, parameter, value, validator):
+    @staticmethod
+    def __param_valid(parameter, value, validator):
         value_lowered = str(value).lower()
         return validator[parameter](value_lowered)
 
@@ -79,7 +83,8 @@ class Data:
 
         return parameters, errors
 
-    def __get_select_sql_request(self, parameters):
+    @staticmethod
+    def __get_select_sql_request(parameters):
         sql = 'SELECT * ' +\
             'FROM cats '
 
@@ -96,7 +101,8 @@ class Data:
 
         return sql + ';'
 
-    def __get_insert_sql_request(self, parameters):
+    @staticmethod
+    def __get_insert_sql_request(parameters):
         sql = 'INSERT INTO cats ('
 
         fields = ''
@@ -115,7 +121,8 @@ class Data:
 
         return sql + ';'
 
-    def __get_insert_parameters(self, gross_params):
+    @staticmethod
+    def __get_insert_parameters(gross_params):
         parameters = {}
         errors = []
 

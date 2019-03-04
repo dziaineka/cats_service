@@ -1,6 +1,5 @@
 import unittest
 import data
-import json
 
 
 class DataTests(unittest.TestCase):
@@ -31,7 +30,7 @@ class DataTests(unittest.TestCase):
         self.assertIsInstance(self.cats_data.add_cat(dict()), str)
 
         parameters = (
-            b"{\"name\": \"Tihonhn\", \"color\": \"red & white\", " +
+            b"{\"name\": \"Tihon\", \"color\": \"red & white\", " +
             b"\"tail_length\": 15, \"whiskers_length\": 45}")
 
         self.assertIsInstance(self.cats_data.add_cat(parameters), str)

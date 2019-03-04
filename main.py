@@ -1,11 +1,8 @@
-import json
-
 from flask import Flask
 from flask import request
-from data import Data
-from urllib import parse
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from data import Data
 
 app = Flask(__name__)
 
