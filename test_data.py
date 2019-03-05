@@ -1,56 +1,56 @@
-import unittest
 import data
+import pytest
 
 
-class DataTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.cats_data = data.Data()
+@pytest.fixture(scope='module')
+def cats_data():
+    yield data.Data()
 
-    def test_get_cats(self):
-        self.assertIsInstance(self.cats_data.get_cats(), str)
 
-        parameters = {
+@pytest.mark.parametrize(
+    'parameters',
+    [
+        None,
+        {
             'attribute': 'name',
             'order': 'asc',
             'offset': '5',
             'limit': '6',
-        }
-        self.assertIsInstance(self.cats_data.get_cats(parameters), str)
-
-        parameters = {
+        },
+        {
             'attribute': 'name',
             'order_invalid': 'asc',
             'offset': '5',
             'limit': '6',
-        }
-        self.assertIsInstance(self.cats_data.get_cats(parameters), str)
+        },
 
-    def test_add_cat(self):
-        self.assertIsInstance(self.cats_data.add_cat(dict()), str)
+    ]
+    )
+def test_get_cats(parameters, cats_data):
+    assert isinstance(cats_data.get_cats(parameters), str)
 
-        parameters = (
-            b"{\"name\": \"Tihon\", \"color\": \"red & white\", " +
-            b"\"tail_length\": 15, \"whiskers_length\": 45}")
 
-        self.assertIsInstance(self.cats_data.add_cat(parameters), str)
+@pytest.mark.parametrize(
+    'parameters',
+    [
+        dict(),
 
-        parameters = {
+        b"{\"name\": \"Tihon\", \"color\": \"red & white\", " +
+        b"\"tail_length\": 15, \"whiskers_length\": 45}",
+
+        {
             'attribute': 'name',
             'order': 'asc',
             'offset': '5',
             'limit': '6',
-        }
-        self.assertIsInstance(self.cats_data.add_cat(parameters), str)
-
-        parameters = {
+        },
+        {
             'name': 'Tihon',
             'color': 'red & white',
             'tail_length': '15',
             'whiskers_length': '12',
         }
-        self.assertIsInstance(self.cats_data.add_cat(parameters), str)
-
-
-if __name__ == '__main__':
-    unittest.main()
+    ]
+    )
+def test_add_cat(parameters, cats_data):
+    assert isinstance(cats_data.add_cat(parameters), str)
